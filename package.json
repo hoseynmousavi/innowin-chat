@@ -1,0 +1,35 @@
+{
+  "name": "innowin-chat",
+  "version": "1.0.0",
+  "description": "this is chat api of innowin.ir",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --exec babel-node src/index.js",
+    "build": "babel src --out-dir build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoseynmousavi/innowin-chat.git"
+  },
+  "keywords": [
+    "chat"
+  ],
+  "author": "Hoseyn Mousavi & Abel Miri",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hoseynmousavi/innowin-chat/issues"
+  },
+  "homepage": "https://github.com/hoseynmousavi/innowin-chat#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "ws": "^7.1.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.5.0",
+    "@babel/core": "^7.5.4",
+    "@babel/node": "^7.5.0",
+    "@babel/preset-env": "^7.5.4",
+    "nodemon": "^1.19.1"
+  }
+}
