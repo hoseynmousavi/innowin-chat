@@ -22,7 +22,8 @@ app.route("/sendMessage")
     .post((req, res) =>
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
-        const {receiver} = req.body.data
+        const data = {...req.body}
+        const {receiver} = data
         if (receiver && arr[receiver])
         {
             arr[receiver].send(JSON.stringify(data))
