@@ -29,7 +29,10 @@ app.route("/sendMessage")
             arr[receiver].send(JSON.stringify(data))
             res.send({state: 1, message: "message sent to the user"})
         }
-        else res.send({state: -1, message: "user is not online"})
+        else
+        {
+            res.send({state: -1, message: "user is not online"})
+        }
     })
 
 app.route("/")
