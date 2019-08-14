@@ -6,8 +6,7 @@ const app = express()
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json())
 
-
-const wss = new WebSocket.Server({port: 5005})
+const wss = new WebSocket.Server({server: app.listen(5000)})
 
 let arr = {}
 
@@ -40,5 +39,3 @@ app.route("/")
     {
         res.send("Hello Babes!")
     })
-
-app.listen(5000, () => console.log(`Innowin Chat is Now Running on Port 5000`))
