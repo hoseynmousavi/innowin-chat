@@ -47,6 +47,25 @@ app.route("/sendMessage")
         else res.send({state: -1, message: "user is not online & wasn't"})
     })
 
+app.route("/sendNotif")
+    .post((req, res) =>
+    {
+        res.setHeader("Access-Control-Allow-Origin", "*")
+        const data = {...req.body, kind: "notification"}
+        const {notification_to_identity} = data
+        if (notification_to_identity && arr[notification_to_identity] && arr[notification_to_identity].ws)
+        {
+            arr[notification_to_identity].ws.send(JSON.stringify(data))
+            res.send({state: 1, message: "notif sent to the user"})
+        }
+        else if (arr[notification_to_identity] && arr[notification_to_identity].token)
+        {
+            if (arr[notification_to_identity].token) webpush.sendNotification(arr[notification_to_identity].token, JSON.stringify({title: "اطلاع رسان اینوین", body: data.notification_html_payload, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
+            res.send({state: -2, message: "user is not online"})
+        }
+        else res.send({state: -1, message: "user is not online & wasn't"})
+    })
+
 app.route("/sendPost")
     .post((req, res) =>
     {
@@ -54,7 +73,7 @@ app.route("/sendPost")
         const data = {...req.body, kind: "post"}
         const array = Object.values(arr)
         array.forEach(user => user.ws.send(JSON.stringify(data)))
-        res.send({state: 1, message: "message sent to the user"})
+        res.send({state: 1, message: "post sent to all users"})
     })
 
 app.route("/")
