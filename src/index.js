@@ -22,10 +22,16 @@ let arr = {}
 
 wss.on("connection", (ws, req) =>
 {
-    const userId = req.url.split("/?id=")[1]
-    const prevUser = arr[userId] ? {...arr[userId]} : {}
-    arr[userId] = {...prevUser, ws}
-    ws.on("close", () => arr[userId].ws = null)
+    const parseDetail = req.url.split("/?id=")[1].split("&unique=")
+    const userId = parseDetail[0]
+    const unique = parseDetail[1]
+    arr[userId] = {...arr[userId], [unique]: {ws}}
+    ws.on("message", (message) =>
+    {
+        console.log("received: ", message)
+        ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
+    })
+    ws.on("close", () => arr[userId][unique] && arr[userId][unique].token ? arr[userId][unique].ws = null : delete arr[userId][unique])
 })
 
 app.route("/sendMessage")
@@ -33,18 +39,28 @@ app.route("/sendMessage")
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const data = {...req.body, kind: "chat"}
-        const {receiver} = data
-        if (receiver && arr[receiver] && arr[receiver].ws)
+        const {receiver, sender} = data
+        if (receiver && arr[receiver])
         {
-            arr[receiver].ws.send(JSON.stringify(data))
+            let tokens = {}
+            Object.values(arr[receiver]).forEach(socket =>
+            {
+                if (socket.ws)
+                {
+                    socket.ws.send(JSON.stringify(data))
+                    if (socket.token) tokens[socket.token.keys.auth] = true
+                }
+                else if (socket.token && tokens[socket.token.keys.auth] !== true)
+                {
+                    tokens[socket.token.keys.auth] = true
+                    webpush.sendNotification(socket.token, JSON.stringify({title: "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
+                }
+            })
             res.send({state: 1, message: "message sent to the user"})
         }
-        else if (arr[receiver] && arr[receiver].token)
-        {
-            if (arr[receiver].token) webpush.sendNotification(arr[receiver].token, JSON.stringify({title: "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
-            res.send({state: -2, message: "user is not online"})
-        }
         else res.send({state: -1, message: "user is not online & wasn't"})
+
+        if (sender && arr[sender]) Object.values(arr[sender]).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
     })
 
 app.route("/sendNotif")
@@ -52,16 +68,11 @@ app.route("/sendNotif")
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const data = {...req.body, kind: "notification"}
-        const {notification_to_identity} = data
-        if (notification_to_identity && arr[notification_to_identity] && arr[notification_to_identity].ws)
+        const {id} = data
+        if (id && arr[id])
         {
-            arr[notification_to_identity].ws.send(JSON.stringify(data))
+            Object.values(arr[id]).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
             res.send({state: 1, message: "notif sent to the user"})
-        }
-        else if (arr[notification_to_identity] && arr[notification_to_identity].token)
-        {
-            if (arr[notification_to_identity].token) webpush.sendNotification(arr[notification_to_identity].token, JSON.stringify({title: "اطلاع رسان اینوین", body: data.notification_html_payload, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
-            res.send({state: -2, message: "user is not online"})
         }
         else res.send({state: -1, message: "user is not online & wasn't"})
     })
@@ -71,8 +82,7 @@ app.route("/sendPost")
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const data = {...req.body, kind: "post"}
-        const array = Object.values(arr)
-        array.forEach(user => user.ws.send(JSON.stringify(data)))
+        Object.values(arr).forEach(user => Object.values(user).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data))))
         res.send({state: 1, message: "post sent to all users"})
     })
 
@@ -86,7 +96,7 @@ app.route("/subscribe")
     .post((req, res) =>
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
-        const {subscription, userId} = req.body
-        if (arr[userId]) arr[userId].token = subscription
+        const {subscription, userId, unique} = req.body
+        if (arr[userId] && arr[userId][unique]) arr[userId][unique].token = subscription
         res.sendStatus(200)
     })
