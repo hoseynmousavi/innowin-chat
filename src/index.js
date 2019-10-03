@@ -42,20 +42,28 @@ app.route("/sendMessage")
         const {receiver, sender} = data
         if (receiver && arr[receiver])
         {
+            const receiverArr = Object.values(arr[receiver])
             let tokens = {}
-            Object.values(arr[receiver]).forEach(socket =>
+            let sended = false
+            for (let i = 0; i < receiverArr.length; i++)
             {
-                if (socket.ws)
+                if (receiverArr[i].ws)
                 {
-                    socket.ws.send(JSON.stringify(data))
-                    if (socket.token) tokens[socket.token.keys.auth] = true
+                    sended = true
+                    receiverArr[i].ws.send(JSON.stringify(data))
                 }
-                else if (socket.token && tokens[socket.token.keys.auth] !== true)
+                else if (i === receiverArr.length - 1 && !sended)
                 {
-                    tokens[socket.token.keys.auth] = true
-                    webpush.sendNotification(socket.token, JSON.stringify({title: "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
+                    receiverArr.forEach(socket =>
+                    {
+                        if (socket.token && tokens[socket.token.keys.auth] !== true)
+                        {
+                            tokens[socket.token.keys.auth] = true
+                            webpush.sendNotification(socket.token, JSON.stringify({title: "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
+                        }
+                    })
                 }
-            })
+            }
             res.send({state: 1, message: "message sent to the user"})
         }
         else res.send({state: -1, message: "user is not online & wasn't"})
