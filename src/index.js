@@ -38,7 +38,8 @@ app.route("/sendMessage")
     .post((req, res) =>
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
-        const data = {...req.body, kind: "chat"}
+        const {socket_id} = req.body
+        const data = req.body.data ? {...JSON.parse(req.body.data), kind: "chat"} : {...req.body, kind: "chat"}
         const {receiver, sender} = data
         if (receiver && arr[receiver])
         {
@@ -59,7 +60,7 @@ app.route("/sendMessage")
                         if (socket.token && tokens[socket.token.keys.auth] !== true)
                         {
                             tokens[socket.token.keys.auth] = true
-                            webpush.sendNotification(socket.token, JSON.stringify({title: "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png"})).catch(err => console.error(err))
+                            webpush.sendNotification(socket.token, JSON.stringify({title: data.sender_fullname || "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png", sender: sender.toString()})).catch(err => console.error(err))
                         }
                     })
                 }
@@ -68,7 +69,7 @@ app.route("/sendMessage")
         }
         else res.send({state: -1, message: "user is not online & wasn't"})
 
-        if (sender && arr[sender]) Object.values(arr[sender]).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
+        if (sender && arr[sender]) Object.values({...arr[sender], [socket_id]: {ws: null}}).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
     })
 
 app.route("/sendNotif")
