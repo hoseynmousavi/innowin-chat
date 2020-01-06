@@ -46,6 +46,7 @@ wss.on("connection", (ws, req) => {
             }
             catch (e) {
                 console.log("problem in parse")
+                ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
             }
         })
         ws.on("close", () => {
