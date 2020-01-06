@@ -28,19 +28,24 @@ wss.on("connection", (ws, req) => {
         const previous = arr[userId] ? {...arr[userId]} : {}
         arr[userId] = {...previous, status: "ONLINE", [unique]: {ws}}
         ws.on("message", (data) => {
-            const parsedData = JSON.parse(data)
-            if (parsedData.kind === "ping") {
-                arr[userId].status = "ONLINE"
-                ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
-            }
-            else if (parsedData.kind === "seen") {
-                const {receiver, roomId} = parsedData
-                if (receiver && arr[receiver]) {
-                    const receiverArr = Object.values(arr[receiver])
-                    for (let i = 0; i < receiverArr.length; i++) {
-                        if (receiverArr[i].ws) receiverArr[i].ws.send(JSON.stringify({roomId, kind: "seen"}))
+            try {
+                const parsedData = JSON.parse(data)
+                if (parsedData.kind === "ping") {
+                    arr[userId].status = "ONLINE"
+                    ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
+                }
+                else if (parsedData.kind === "seen") {
+                    const {receiver, roomId} = parsedData
+                    if (receiver && arr[receiver]) {
+                        const receiverArr = Object.values(arr[receiver])
+                        for (let i = 0; i < receiverArr.length; i++) {
+                            if (receiverArr[i].ws) receiverArr[i].ws.send(JSON.stringify({roomId, kind: "seen"}))
+                        }
                     }
                 }
+            }
+            catch (e) {
+                console.log("problem in parse")
             }
         })
         ws.on("close", () => {
@@ -104,10 +109,13 @@ app.route("/sendPost")
 
 app.route("/getLastSeen")
     .get((req, res) => {
-        const userId = req.query.userId
+        const userId = req.query && req.query.userId
         if (userId && arr[userId]) res.send({status: arr[userId].status})
         else res.send({status: null})
     })
+
+app.route("/riyasat")
+    .get((req, res) => res.send(arr))
 
 app.route("*")
     .get((req, res) => res.send("Hello Babes!"))
