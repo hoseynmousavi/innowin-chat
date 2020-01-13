@@ -5,6 +5,8 @@ import WebSocket from "ws"
 import webpush from "web-push"
 
 const app = express()
+const REST_URL = "https://betaback.innowin.ir"
+// const REST_URL = "https://back.innowin.ir"
 app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json())
@@ -76,7 +78,21 @@ app.route("/sendMessage")
                     receiverArr.forEach(socket => {
                         if (socket.token && tokens[socket.token.keys.auth] !== true) {
                             tokens[socket.token.keys.auth] = true
-                            webpush.sendNotification(socket.token, JSON.stringify({title: data.sender_fullname || "پیام رسان اینوین", body: data.text, icon: "https://innowin.ir/icon-192x192.png", sender: sender.toString()})).catch(err => console.error(err))
+                            webpush.sendNotification(
+                                socket.token,
+                                JSON.stringify({
+                                    title: data.sender_fullname || "پیام رسان اینوین",
+                                    body: data.text,
+                                    icon: data.sender_profile_media && data.sender_profile_media.file ?
+                                        data.sender_profile_media.file.includes(REST_URL) ? data.sender_profile_media.file : REST_URL + data.sender_profile_media.file
+                                        :
+                                        "https://innowin.ir/icon-192x192.png",
+                                    tag: sender.toString(),
+                                    requireInteraction: true,
+                                    renotify: true,
+                                }),
+                            )
+                                .catch(err => console.error(err))
                         }
                     })
                 }
