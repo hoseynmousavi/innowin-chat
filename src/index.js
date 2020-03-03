@@ -3,10 +3,11 @@ import cors from "cors"
 import bodyParser from "body-parser"
 import WebSocket from "ws"
 import webpush from "web-push"
+import fs from "fs"
 
 const app = express()
-const REST_URL = "https://betaback.innowin.ir"
-// const REST_URL = "https://back.innowin.ir"
+const REST_URL = "https://beta.innowin.ir/api"
+// const REST_URL = "https://innowin.ir/api"
 app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json())
@@ -22,6 +23,11 @@ const wss = new WebSocket.Server({server: app.listen(5000)})
 
 let arr = {}
 
+fs.readFile("./notif.json", null, (err, data) => {
+    if (err) console.log(err)
+    else arr = JSON.parse(data.toString())
+})
+
 wss.on("connection", (ws, req) => {
     const parseDetail = req.url.split("/?id=")[1].split("&unique=")
     const userId = parseDetail[0]
@@ -29,12 +35,14 @@ wss.on("connection", (ws, req) => {
     if (userId && unique) {
         const previous = arr[userId] ? {...arr[userId]} : {}
         arr[userId] = {...previous, status: "ONLINE", [unique]: {ws}}
+        fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
         ws.on("message", (data) => {
             try {
                 const parsedData = JSON.parse(data)
                 if (parsedData.kind === "ping") {
                     arr[userId].status = "ONLINE"
                     ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
+                    fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
                 }
                 else if (parsedData.kind === "seen") {
                     const {receiver, roomId} = parsedData
@@ -55,6 +63,7 @@ wss.on("connection", (ws, req) => {
             if (arr[userId][unique] && arr[userId][unique].token) arr[userId][unique].ws = null
             else delete arr[userId][unique]
             arr[userId].status = new Date().toISOString()
+            fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
         })
     }
 })
@@ -82,11 +91,15 @@ app.route("/sendMessage")
                                 socket.token,
                                 JSON.stringify({
                                     title: data.sender_fullname || "پیام رسان اینوین",
-                                    body: data.text,
                                     icon: data.sender_profile_media && data.sender_profile_media.file ?
                                         data.sender_profile_media.file.includes(REST_URL) ? data.sender_profile_media.file : REST_URL + data.sender_profile_media.file
                                         :
                                         "https://innowin.ir/icon-192x192.png",
+                                    body: data.attachment && data.attachment.file && data.attachment.type === "image" ? "" : data.text,
+                                    image: data.attachment && data.attachment.file && data.attachment.type === "image" ?
+                                        data.attachment.file.includes(REST_URL) ? data.attachment.file : REST_URL + data.attachment.file
+                                        :
+                                        null,
                                     tag: sender.toString(),
                                     requireInteraction: true,
                                     renotify: true,
