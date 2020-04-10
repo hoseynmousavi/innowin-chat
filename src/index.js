@@ -23,43 +23,54 @@ const wss = new WebSocket.Server({server: app.listen(5000)})
 
 let arr = {}
 
-fs.readFile("./notif.json", null, (err, data) => {
+fs.readFile("./notif.json", null, (err, data) =>
+{
     if (err) console.log(err)
     else arr = JSON.parse(data.toString())
 })
 
-wss.on("connection", (ws, req) => {
+wss.on("connection", (ws, req) =>
+{
     const parseDetail = req.url.split("/?id=")[1].split("&unique=")
     const userId = parseDetail[0]
     const unique = parseDetail[1]
-    if (userId && unique) {
+    if (userId && unique)
+    {
         const previous = arr[userId] ? {...arr[userId]} : {}
         arr[userId] = {...previous, status: "ONLINE", [unique]: {ws}}
         fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
-        ws.on("message", (data) => {
-            try {
+        ws.on("message", (data) =>
+        {
+            try
+            {
                 const parsedData = JSON.parse(data)
-                if (parsedData.kind === "ping") {
+                if (parsedData.kind === "ping")
+                {
                     arr[userId].status = "ONLINE"
                     ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
                     fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
                 }
-                else if (parsedData.kind === "seen") {
+                else if (parsedData.kind === "seen")
+                {
                     const {receiver, roomId} = parsedData
-                    if (receiver && arr[receiver]) {
+                    if (receiver && arr[receiver])
+                    {
                         const receiverArr = Object.values(arr[receiver])
-                        for (let i = 0; i < receiverArr.length; i++) {
+                        for (let i = 0; i < receiverArr.length; i++)
+                        {
                             if (receiverArr[i].ws) receiverArr[i].ws.send(JSON.stringify({roomId, kind: "seen"}))
                         }
                     }
                 }
             }
-            catch (e) {
+            catch (e)
+            {
                 console.log("problem in parse")
                 ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
             }
         })
-        ws.on("close", () => {
+        ws.on("close", () =>
+        {
             if (arr[userId][unique] && arr[userId][unique].token) arr[userId][unique].ws = null
             else delete arr[userId][unique]
             arr[userId].status = new Date().toISOString()
@@ -69,23 +80,30 @@ wss.on("connection", (ws, req) => {
 })
 
 app.route("/sendMessage")
-    .post((req, res) => {
+    .post((req, res) =>
+    {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const {socket_id} = req.body
         const data = req.body.data ? {...JSON.parse(req.body.data), kind: "chat"} : {...req.body, kind: "chat"}
         const {receiver, sender} = data
-        if (receiver && arr[receiver]) {
+        if (receiver && arr[receiver])
+        {
             const receiverArr = Object.values(arr[receiver])
             let tokens = {}
             let sended = false
-            for (let i = 0; i < receiverArr.length; i++) {
-                if (receiverArr[i].ws) {
+            for (let i = 0; i < receiverArr.length; i++)
+            {
+                if (receiverArr[i].ws)
+                {
                     sended = true
                     receiverArr[i].ws.send(JSON.stringify(data))
                 }
-                else if (i === receiverArr.length - 1 && !sended) {
-                    receiverArr.forEach(socket => {
-                        if (socket.token && tokens[socket.token.keys.auth] !== true) {
+                else if (i === receiverArr.length - 1 && !sended)
+                {
+                    receiverArr.forEach(socket =>
+                    {
+                        if (socket.token && tokens[socket.token.keys.auth] !== true)
+                        {
                             tokens[socket.token.keys.auth] = true
                             webpush.sendNotification(
                                 socket.token,
@@ -118,11 +136,13 @@ app.route("/sendMessage")
     })
 
 app.route("/sendNotif")
-    .post((req, res) => {
+    .post((req, res) =>
+    {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const data = {...req.body, kind: "notification"}
         const {id} = data
-        if (id && arr[id]) {
+        if (id && arr[id])
+        {
             Object.values(arr[id]).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
             res.send({state: 1, message: "notif sent to the user"})
         }
@@ -130,7 +150,8 @@ app.route("/sendNotif")
     })
 
 app.route("/sendPost")
-    .post((req, res) => {
+    .post((req, res) =>
+    {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const data = {...req.body, kind: "post"}
         Object.values(arr).forEach(user => Object.values(user).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data))))
@@ -138,7 +159,8 @@ app.route("/sendPost")
     })
 
 app.route("/getLastSeen")
-    .get((req, res) => {
+    .get((req, res) =>
+    {
         const userId = req.query && req.query.userId
         if (userId && arr[userId]) res.send({status: arr[userId].status})
         else res.send({status: null})
@@ -151,7 +173,8 @@ app.route("*")
     .get((req, res) => res.send("Hello Babes!"))
 
 app.route("/subscribe")
-    .post((req, res) => {
+    .post((req, res) =>
+    {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const {subscription, userId, unique} = req.body
         if (arr[userId] && arr[userId][unique]) arr[userId][unique].token = subscription
