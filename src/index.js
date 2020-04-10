@@ -1,5 +1,4 @@
 import express from "express"
-import cors from "cors"
 import bodyParser from "body-parser"
 import WebSocket from "ws"
 import webpush from "web-push"
@@ -8,7 +7,6 @@ import fs from "fs"
 const app = express()
 const REST_URL = "https://beta.innowin.ir/api"
 // const REST_URL = "https://innowin.ir/api"
-app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json())
 
@@ -38,7 +36,16 @@ wss.on("connection", (ws, req) =>
     {
         const previous = arr[userId] ? {...arr[userId]} : {}
         arr[userId] = {...previous, status: "ONLINE", [unique]: {ws}}
-        fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+
+        try
+        {
+            fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+        }
+        catch (e)
+        {
+            console.log(e.message)
+        }
+
         ws.on("message", (data) =>
         {
             try
@@ -65,16 +72,23 @@ wss.on("connection", (ws, req) =>
             }
             catch (e)
             {
-                console.log("problem in parse")
+                console.log(e.message)
                 ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
             }
         })
         ws.on("close", () =>
         {
-            if (arr[userId][unique] && arr[userId][unique].token) arr[userId][unique].ws = null
+            if (arr[userId][unique] && arr[userId][unique].token) delete arr[userId][unique].ws
             else delete arr[userId][unique]
             arr[userId].status = new Date().toISOString()
-            fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+            try
+            {
+                fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+            }
+            catch (e)
+            {
+                console.log(e.message)
+            }
         })
     }
 })
