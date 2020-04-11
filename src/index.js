@@ -1,4 +1,5 @@
 import express from "express"
+import cors from "cors"
 import bodyParser from "body-parser"
 import WebSocket from "ws"
 import webpush from "web-push"
@@ -7,6 +8,8 @@ import fs from "fs"
 const app = express()
 const REST_URL = "https://beta.innowin.ir/api"
 // const REST_URL = "https://innowin.ir/api"
+
+app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json())
 
