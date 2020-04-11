@@ -175,6 +175,7 @@ app.route("/sendPost")
 app.route("/getLastSeen")
     .get((req, res) =>
     {
+        res.setHeader("Access-Control-Allow-Origin", "*")
         const userId = req.query && req.query.userId
         if (userId && arr[userId]) res.send({status: arr[userId].status})
         else res.send({status: null})
