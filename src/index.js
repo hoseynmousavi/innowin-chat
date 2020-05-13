@@ -23,11 +23,16 @@ webpush.setVapidDetails(
 const wss = new WebSocket.Server({server: app.listen(5000)})
 
 let arr = {}
+let fileArr = {}
 
 fs.readFile("./notif.json", null, (err, data) =>
 {
     if (err) console.log(err)
-    else arr = JSON.parse(data.toString())
+    else
+    {
+        arr = JSON.parse(data.toString())
+        fileArr = JSON.parse(data.toString())
+    }
 })
 
 wss.on("connection", (ws, req) =>
@@ -40,9 +45,12 @@ wss.on("connection", (ws, req) =>
         const previous = arr[userId] ? {...arr[userId]} : {}
         arr[userId] = {...previous, status: "ONLINE", [unique]: {ws}}
 
+        const previousFile = fileArr[userId] ? {...fileArr[userId]} : {}
+        fileArr[userId] = {...previousFile, status: "ONLINE", [unique]: {}}
+
         try
         {
-            fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+            fs.writeFile("./notif.json", JSON.stringify(fileArr), (err) => err ? console.log("save err") : console.log("done"))
         }
         catch (e)
         {
@@ -56,9 +64,10 @@ wss.on("connection", (ws, req) =>
                 const parsedData = JSON.parse(data)
                 if (parsedData.kind === "ping")
                 {
-                    arr[userId].status = "ONLINE"
                     ws.send(JSON.stringify({message: new Date().toISOString(), kind: "ping"}))
-                    fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+                    arr[userId].status = "ONLINE"
+                    fileArr[userId].status = "ONLINE"
+                    fs.writeFile("./notif.json", JSON.stringify(fileArr), (err) => err ? console.log("save err") : console.log("done"))
                 }
                 else if (parsedData.kind === "seen")
                 {
@@ -81,12 +90,22 @@ wss.on("connection", (ws, req) =>
         })
         ws.on("close", () =>
         {
-            if (arr[userId][unique] && arr[userId][unique].token) delete arr[userId][unique].ws
-            else delete arr[userId][unique]
+            if (arr[userId][unique] && arr[userId][unique].token)
+            {
+                delete arr[userId][unique].ws
+                delete fileArr[userId][unique].ws
+            }
+            else
+            {
+                delete arr[userId][unique]
+                delete fileArr[userId][unique]
+            }
             arr[userId].status = new Date().toISOString()
+            fileArr[userId].status = new Date().toISOString()
+
             try
             {
-                fs.writeFile("./notif.json", JSON.stringify(arr), (err) => err ? console.log(err) : console.log("done"))
+                fs.writeFile("./notif.json", JSON.stringify(fileArr), (err) => err ? console.log("save err") : console.log("done"))
             }
             catch (e)
             {
@@ -227,6 +246,19 @@ app.route("/subscribe")
     {
         res.setHeader("Access-Control-Allow-Origin", "*")
         const {subscription, userId, unique} = req.body
-        if (arr[userId] && arr[userId][unique]) arr[userId][unique].token = subscription
+        if (arr[userId] && arr[userId][unique])
+        {
+            arr[userId][unique].token = subscription
+            fileArr[userId][unique].token = subscription
+
+            try
+            {
+                fs.writeFile("./notif.json", JSON.stringify(fileArr), (err) => err ? console.log("save err") : console.log("done"))
+            }
+            catch (e)
+            {
+                console.log(e.message)
+            }
+        }
         res.sendStatus(200)
     })
