@@ -136,6 +136,7 @@ app.route("/sendMessage")
                                         :
                                         null,
                                     tag: sender.toString(),
+                                    url: `/chat/${sender}`,
                                     requireInteraction: true,
                                     renotify: true,
                                 }),
@@ -150,6 +151,37 @@ app.route("/sendMessage")
         else res.send({state: -1, message: "user is not online & wasn't"})
 
         if (sender && arr[sender]) Object.values({...arr[sender], [socket_id]: {ws: null}}).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
+    })
+
+
+app.route("/broadcast")
+    .post((req, res) =>
+    {
+        const {title, icon, body, image, tag, url, requireInteraction} = req.body
+        if (title && body && tag && url)
+        {
+            Object.values(arr).forEach(item =>
+            {
+                Object.values(item).forEach(notif =>
+                {
+                    webpush.sendNotification(
+                        notif.token,
+                        JSON.stringify({
+                            title,
+                            icon: icon ? icon : "https://innowin.ir/icon-192x192.png",
+                            body,
+                            image: image ? image : null,
+                            tag,
+                            url,
+                            requireInteraction,
+                            renotify: true,
+                        }),
+                    )
+                        .catch(err => console.error(err))
+                })
+            })
+        }
+        else res.status(400).send({message: "send title && body && tag && url"})
     })
 
 app.route("/sendNotif")
