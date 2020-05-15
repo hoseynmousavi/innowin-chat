@@ -179,6 +179,8 @@ app.route("/broadcast")
         const {title, icon, body, image, tag, url, requireInteraction} = req.body
         if (title && body && tag && url)
         {
+            res.status(200).send({message: "I will try my best Mr.Sajad"})
+            
             Object.values(arr).forEach(item =>
             {
                 Object.values(item).forEach(notif =>
