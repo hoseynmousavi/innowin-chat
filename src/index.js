@@ -172,6 +172,42 @@ app.route("/sendMessage")
         if (sender && arr[sender]) Object.values({...arr[sender], [socket_id]: {ws: null}}).forEach(socket => socket.ws && socket.ws.send(JSON.stringify(data)))
     })
 
+app.route("/sendNotifToUser")
+    .post((req, res) =>
+    {
+        res.setHeader("Access-Control-Allow-Origin", "*")
+        const {receiver, title, icon, body, url} = req.body
+        if (receiver && title && body)
+        {
+            const receiverArr = Object.values(arr[receiver])
+            let tokens = {}
+            for (let i = 0; i < receiverArr.length; i++)
+            {
+                receiverArr.forEach(socket =>
+                {
+                    if (socket.token && tokens[socket.token.keys.auth] !== true)
+                    {
+                        tokens[socket.token.keys.auth] = true
+                        webpush.sendNotification(
+                            socket.token,
+                            JSON.stringify({
+                                title,
+                                icon: icon || "https://innowin.ir/icon-192x192.png",
+                                body,
+                                tag: title,
+                                url: url || "https://innowin.ir/home",
+                                requireInteraction: true,
+                                renotify: true,
+                            }),
+                        )
+                            .catch(err => console.error(err))
+                    }
+                })
+            }
+            res.send({state: 1, message: "message sent to the user"})
+        }
+        else res.status(400).send({state: -1, message: "send receiver, title, body"})
+    })
 
 app.route("/broadcast")
     .post((req, res) =>
@@ -180,7 +216,7 @@ app.route("/broadcast")
         if (title && body && tag && url)
         {
             res.status(200).send({message: "I will try my best Mr.Sajad"})
-            
+
             Object.values(arr).forEach(item =>
             {
                 Object.values(item).forEach(notif =>
